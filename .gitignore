@@ -34,3 +34,4 @@ Thumbs.db
 
 # runtime-generated data (seed fixtures, uploads)
 .data/
+.neon
