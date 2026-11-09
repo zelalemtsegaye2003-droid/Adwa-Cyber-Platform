@@ -9,12 +9,22 @@
 // USER-SAFE: organizations are upserted by slug (never deleted), so tenant
 // users and their organization links survive re-seeding.
 // Run: bun prisma/seed.ts
+//
+// PRODUCTION SAFETY: the full (demo) seed WIPES every scan and scan result.
+// When NODE_ENV=production, or when --catalogue-only is passed, only the
+// frameworks and rule catalogues are upserted (by code) and nothing is deleted
+// or created beyond that. Set ALLOW_DEMO_SEED=1 to force the demo seed in
+// production (never do this against real tenant data).
 import { PrismaClient } from "@prisma/client";
 import { RULES } from "../src/lib/rules-data";
 import { NBE_RULES } from "../src/lib/nbe-rules-data";
 import { evaluate, pillarConfFromJson, type PillarConf, type Answer } from "../src/lib/engine";
 
 const db = new PrismaClient();
+
+const catalogueOnly =
+  process.argv.includes("--catalogue-only") ||
+  (process.env.NODE_ENV === "production" && process.env.ALLOW_DEMO_SEED !== "1");
 
 function weightFor(severity: string): number {
   return severity === "critical" ? 3 : severity === "high" ? 2 : 1;
@@ -91,42 +101,49 @@ async function main() {
 
   // 2. Wipe scans (results cascade), then rebuild each framework's rule set.
   //    Scans are demo data; rules are fully derived from the seed files.
-  console.log("Rebuilding rule catalogues…");
-  await db.scanResult.deleteMany();
-  await db.scan.deleteMany();
-  await db.rule.deleteMany();
+  console.log(catalogueOnly ? "Upserting rule catalogues (catalogue-only mode, nothing deleted)…" : "Rebuilding rule catalogues…");
+  if (!catalogueOnly) {
+    await db.scanResult.deleteMany();
+    await db.scan.deleteMany();
+    await db.rule.deleteMany();
+  }
 
   const catalogues: Record<string, { rules: typeof RULES; conf: PillarConf }> = {};
   for (const f of FRAMEWORKS) {
     const fw = await db.framework.findUniqueOrThrow({ where: { code: f.code } });
     const seeds = f.code === "PD-1321" ? RULES : NBE_RULES;
     for (const r of seeds) {
-      await db.rule.create({
-        data: {
-          code: r.code,
-          frameworkId: fw.id,
-          sortOrder: r.sortOrder,
-          article: r.article,
-          articleSubject: r.articleSubject,
-          titleEn: r.titleEn,
-          titleAm: r.titleAm,
-          statementEn: r.statementEn,
-          statementAm: r.statementAm,
-          questionEn: r.questionEn,
-          questionAm: r.questionAm,
-          checkLogic: r.checkLogic,
-          remediationEn: r.remediationEn,
-          remediationAm: r.remediationAm,
-          pillar: r.pillar,
-          severity: r.severity,
-          priority: r.priority,
-          penaltyRef: r.penaltyRef,
-          weight: weightFor(r.severity),
-        },
-      });
+      const data = {
+        code: r.code,
+        frameworkId: fw.id,
+        sortOrder: r.sortOrder,
+        article: r.article,
+        articleSubject: r.articleSubject,
+        titleEn: r.titleEn,
+        titleAm: r.titleAm,
+        statementEn: r.statementEn,
+        statementAm: r.statementAm,
+        questionEn: r.questionEn,
+        questionAm: r.questionAm,
+        checkLogic: r.checkLogic,
+        remediationEn: r.remediationEn,
+        remediationAm: r.remediationAm,
+        pillar: r.pillar,
+        severity: r.severity,
+        priority: r.priority,
+        penaltyRef: r.penaltyRef,
+        weight: weightFor(r.severity),
+      };
+      // Upsert by code keeps rule ids stable, so existing scans stay linked.
+      await db.rule.upsert({ where: { code: r.code }, create: data, update: data });
     }
     catalogues[f.code] = { rules: seeds, conf: pillarConfFromJson(fw.pillars) };
     console.log(`  ${f.code}: ${seeds.length} obligations`);
+  }
+
+  if (catalogueOnly) {
+    console.log("Catalogue seed complete (no demo organizations or scans created).");
+    return;
   }
 
   // 3. Organizations — upsert by slug (preserves ids → tenant users keep links)

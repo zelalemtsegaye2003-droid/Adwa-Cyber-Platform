@@ -1,0 +1,28 @@
+# DEVELOPMENT / SANDBOX ONLY — do not deploy this file.
+# The XTransformPort rule below proxies to ANY localhost port chosen by the
+# request's query string (used to reach mock-google / mock-ethiocert behind one
+# origin). On a real host that would expose every internal service. Production
+# uses ./Caddyfile instead.
+:81 {
+	@transform_port_query {
+		query XTransformPort=*
+	}
+
+	handle @transform_port_query {
+		reverse_proxy localhost:{query.XTransformPort} {
+			header_up Host {host}
+			header_up X-Forwarded-For {remote_host}
+			header_up X-Forwarded-Proto {scheme}
+			header_up X-Real-IP {remote_host}
+		}
+	}
+
+	handle {
+		reverse_proxy localhost:3000 {
+			header_up Host {host}
+			header_up X-Forwarded-For {remote_host}
+			header_up X-Forwarded-Proto {scheme}
+			header_up X-Real-IP {remote_host}
+		}
+	}
+}

@@ -100,7 +100,9 @@ export function makeStoredName(originalName: string): string {
   return randomBytes(16).toString("hex") + (extMatch ? "." + extMatch.ext : "");
 }
 
-const STORAGE_ROOT = path.join(process.cwd(), ".data", "evidence");
+// DATA_DIR lets deployments mount persistent storage at a fixed path (the
+// Next standalone server changes its cwd, so a cwd-relative default is fragile).
+const STORAGE_ROOT = path.join(process.env.DATA_DIR || path.join(process.cwd(), ".data"), "evidence");
 
 export function orgStorageDir(orgId: string): string {
   return path.join(STORAGE_ROOT, orgId);

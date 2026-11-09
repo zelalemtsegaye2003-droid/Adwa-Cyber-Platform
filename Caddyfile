@@ -1,23 +1,30 @@
-:81 {
-	@transform_port_query {
-		query XTransformPort=*
+# Production reverse proxy with automatic HTTPS (Let's Encrypt).
+#
+# SITE_ADDRESS must be the public hostname, e.g. platform.example.org.
+# DNS for it must point at this host and ports 80/443 must be reachable.
+# Session cookies are `Secure` in production, so the app only works over HTTPS.
+{$SITE_ADDRESS} {
+	encode zstd gzip
+
+	# Limit request bodies (evidence uploads are capped at 10 MB by the app).
+	request_body {
+		max_size 12MB
 	}
 
-	handle @transform_port_query {
-		reverse_proxy localhost:{query.XTransformPort} {
-			header_up Host {host}
-			header_up X-Forwarded-For {remote_host}
-			header_up X-Forwarded-Proto {scheme}
-			header_up X-Real-IP {remote_host}
-		}
+	reverse_proxy {$APP_UPSTREAM:app:3000} {
+		# OVERWRITE (not append) the client-supplied headers so the app only ever
+		# sees the real peer address — the app's rate limiter trusts these.
+		header_up X-Forwarded-For {remote_host}
+		header_up X-Real-IP {remote_host}
+		header_up X-Forwarded-Proto {scheme}
+		header_up X-Forwarded-Host {host}
+
+		health_uri /api/health
+		health_interval 30s
 	}
 
-	handle {
-		reverse_proxy localhost:3000 {
-			header_up Host {host}
-			header_up X-Forwarded-For {remote_host}
-			header_up X-Forwarded-Proto {scheme}
-			header_up X-Real-IP {remote_host}
-		}
+	log {
+		output stdout
+		format json
 	}
 }

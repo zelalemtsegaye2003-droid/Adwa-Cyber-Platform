@@ -44,7 +44,7 @@ import { join } from "path";
  * is covered by scripts/test-google.ts.
  */
 const BASE = "http://localhost:3000";
-const PROJECT = "/home/z/my-project";
+const PROJECT = join(import.meta.dir, "..");
 
 const SUPER = { email: "admin@adwacyber.et", password: "Adwa#Admin2026!" };
 const VIEWER = { email: "viewer@ethiotelecom.et", password: "Adwa#Demo2026!" };
@@ -261,6 +261,7 @@ async function main() {
     const r2 = await loginPost({ email: { $ne: null } as any, password: { $ne: null } as any }, ips.nosql, false);
     ok("NoSQL/type-confusion body → clean 4xx, no 500", r2.res.status === 400 || r2.res.status === 401, `got ${r2.res.status}`);
 
+    const cfgBefore = await (await fetch(`${BASE}/api/auth/config`)).json();
     const r3 = await fetch(`${BASE}/api/auth/register`, {
       method: "POST",
       headers: { "Content-Type": "application/json", "X-Forwarded-For": ips.proto },
@@ -269,7 +270,7 @@ async function main() {
     ok("prototype-pollution keys → no crash", r3.status === 400, `got ${r3.status}`);
     const probeResp = await fetch(`${BASE}/api/auth/config`);
     const cfg = await probeResp.json();
-    ok("server state unaffected by proto probe", cfg.googleEnabled === true, "config still sane");
+    ok("server state unaffected by proto probe", JSON.stringify(cfg) === JSON.stringify(cfgBefore), "config unchanged by the probe");
 
     const r4 = await loginPost({ email: ["admin@adwacyber.et"] as any, password: 12345 as any }, ips.type, false);
     ok("wrong JSON types → clean 4xx, no 500", r4.res.status === 400 || r4.res.status === 401, `got ${r4.res.status}`);

@@ -108,7 +108,7 @@ try {
 
   const pingCount = await db.awarenessToolPing.count({ where: { tool: "phishing", lang: "en" } });
   check("pings persisted as aggregate rows", pingCount >= 25, `phishing/en rows=${pingCount}`);
-  const cols = await db.$queryRaw`PRAGMA table_info(AwarenessToolPing)`;
+  const cols = await db.$queryRaw`SELECT column_name AS name FROM information_schema.columns WHERE table_name = 'AwarenessToolPing'`;
   const colNames = cols.map((c) => c.name);
   check("telemetry carries no IP / learner columns", !colNames.includes("ip") && !colNames.includes("learnerId") && !colNames.includes("userAgent"), colNames.join(","));
 

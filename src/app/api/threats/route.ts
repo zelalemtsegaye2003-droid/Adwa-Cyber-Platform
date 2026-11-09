@@ -87,10 +87,10 @@ export async function GET(req: NextRequest) {
   const search = q
     ? {
         OR: [
-          { value: { contains: q } },
-          { titleEn: { contains: q } },
-          { titleAm: { contains: q } },
-          { descriptionEn: { contains: q } },
+          { value: { contains: q, mode: "insensitive" as const } },
+          { titleEn: { contains: q, mode: "insensitive" as const } },
+          { titleAm: { contains: q, mode: "insensitive" as const } },
+          { descriptionEn: { contains: q, mode: "insensitive" as const } },
         ],
       }
     : {};

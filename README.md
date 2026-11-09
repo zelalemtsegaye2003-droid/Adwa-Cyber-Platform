@@ -55,7 +55,12 @@ Optional: `cd mini-services/mock-google && bun run dev` starts the mock Google
 OAuth/OIDC provider on :3010 so the full Google sign-in flow can be exercised
 without real credentials (enabled via `GOOGLE_*` overrides in `.env`).
 
-## Demo accounts (`bun scripts/seed-users.ts`)
+## Demo accounts (`bun scripts/seed-users.ts`) — DEVELOPMENT ONLY
+
+> **Warning:** these credentials are published in this repository. Never create
+> them on a real deployment. `seed-users.ts` refuses to run when
+> `NODE_ENV=production` (override: `ALLOW_DEMO_SEED=1`, never against real
+> data). For production use the bootstrap below.
 
 | Account | Role | Password | MFA |
 |---|---|---|---|
@@ -64,6 +69,24 @@ without real credentials (enabled via `GOOGLE_*` overrides in `.env`).
 | officer@cbe.com.et | COMPLIANCE_OFFICER (CBE) | `Adwa#Demo2026!` | **TOTP on** |
 | auditor@dashen.com.et | AUDITOR (Dashen) | `Adwa#Demo2026!` | off |
 | viewer@ethiotelecom.et | VIEWER (Ethio Telecom) | `Adwa#Demo2026!` | off |
+
+## Production bootstrap (first administrator)
+
+On a real deployment, load the rule catalogues and create the first super
+admin from environment variables instead of using the demo seeds:
+
+```bash
+NODE_ENV=production bun prisma/seed.ts          # catalogue-only: frameworks + rules, no demo orgs/scans, nothing deleted
+ADMIN_EMAIL=you@example.org \
+ADMIN_PASSWORD='<14+ chars, mixed case, digit, symbol>' \
+ADMIN_NAME='Your Name' \
+bun scripts/bootstrap-admin.ts
+```
+
+`bootstrap-admin.ts` rejects weak or published passwords, is idempotent (does
+nothing if a super admin already exists), never prints the password, and
+disables any leftover demo accounts (`--keep-demo` to skip). Sign in and enable
+MFA on that account straight away.
 
 ## Tests (against the running dev server)
 

@@ -29,9 +29,7 @@ const nextConfig: NextConfig = {
   // pdfkit reads font/AFM files from disk at runtime — keep it external so
   // Turbopack/webpack don't try to bundle those reads.
   serverExternalPackages: ["pdfkit"],
-  typescript: {
-    ignoreBuildErrors: true,
-  },
+
   reactStrictMode: false,
   async headers() {
     return [

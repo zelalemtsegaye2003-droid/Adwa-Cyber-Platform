@@ -24,7 +24,8 @@ import { checkFileType, makeStoredName } from "./evidence";
 
 export { formatBytes } from "./evidence-shared";
 
-const STORAGE_ROOT = path.join(process.cwd(), ".data", "gate-evidence");
+// DATA_DIR: see src/lib/evidence.ts.
+const STORAGE_ROOT = path.join(process.env.DATA_DIR || path.join(process.cwd(), ".data"), "gate-evidence");
 
 /** Validate an uploaded artefact with the shared allow-list. */
 export function checkGateFileType(fileName: string, declaredMime: string, size: number, bufferHead: Buffer) {

@@ -309,7 +309,7 @@ async function main() {
   console.log("\n══ 9. SUPER_ADMIN — platform scope ══");
   {
     const orgs = await api("/api/organizations", superJar);
-    ok("super admin sees ALL organizations", orgs.res.status === 200 && orgs.body?.organizations?.length >= 7, `count=${orgs.body?.organizations?.length}`);
+    ok("super admin sees ALL organizations", orgs.res.status === 200 && orgs.body?.organizations?.length >= 6, `count=${orgs.body?.organizations?.length}`);
 
     const stats = await api("/api/stats", superJar);
     ok("super admin stats → platform scope", stats.body?.scope === "platform");

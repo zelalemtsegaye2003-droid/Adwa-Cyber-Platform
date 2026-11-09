@@ -69,7 +69,7 @@ export async function GET(req: NextRequest) {
   if (!user) {
     const domain = email.split("@")[1] ?? "";
     const org = await db.organization.findFirst({
-      where: { contactEmail: { endsWith: `@${domain}` } },
+      where: { contactEmail: { endsWith: `@${domain}`, mode: "insensitive" } },
     });
     if (org) {
       user = await db.user.create({

@@ -3,9 +3,21 @@
  * Creates the platform super admin and demo tenant users for the pilot.
  * Idempotent: safe to re-run (upsert by email).
  *
+ * DEVELOPMENT / DEMO ONLY. The passwords below are published in the README.
+ * It refuses to run when NODE_ENV=production unless ALLOW_DEMO_SEED=1.
+ * For a real deployment use scripts/bootstrap-admin.ts instead.
+ *
  * Run: bun scripts/seed-users.ts
  */
 import { PrismaClient } from "@prisma/client";
+
+if (process.env.NODE_ENV === "production" && process.env.ALLOW_DEMO_SEED !== "1") {
+  console.error(
+    "✗ Refusing to create demo accounts with published passwords in production.\n" +
+      "  Use `bun scripts/bootstrap-admin.ts` to create the first administrator."
+  );
+  process.exit(1);
+}
 
 // reuse the platform's crypto/TOTP implementations (relative import, bun runs TS natively)
 import { hashPassword, encryptSecret, sha256 } from "../src/lib/auth/crypto";

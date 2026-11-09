@@ -1,0 +1,52 @@
+# Production stack: app + Caddy (automatic HTTPS).
+#
+#   export SITE_ADDRESS=platform.example.org
+#   export AUTH_SECRET="$(openssl rand -hex 48)"     # 96 hex chars; keep it secret & stable
+#   docker compose up -d --build
+#
+# First run — load catalogues and create the first administrator:
+#   docker compose exec app bun prisma/seed.ts
+#   docker compose exec -e ADMIN_EMAIL=you@example.org -e ADMIN_PASSWORD='...' app bun scripts/bootstrap-admin.ts
+#
+# Data (SQLite database + evidence files) lives in the `adwa-data` volume —
+# back it up. Rotating AUTH_SECRET invalidates sessions AND enrolled MFA.
+services:
+  app:
+    build: .
+    restart: unless-stopped
+    environment:
+      AUTH_SECRET: ${AUTH_SECRET:?AUTH_SECRET must be set (64+ random characters)}
+      # Optional integrations — leave unset to disable.
+      GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID:-}
+      GOOGLE_CLIENT_SECRET: ${GOOGLE_CLIENT_SECRET:-}
+      HCAPTCHA_SITE_KEY: ${HCAPTCHA_SITE_KEY:-}
+      HCAPTCHA_SECRET: ${HCAPTCHA_SECRET:-}
+      RECAPTCHA_SITE_KEY: ${RECAPTCHA_SITE_KEY:-}
+      RECAPTCHA_SECRET: ${RECAPTCHA_SECRET:-}
+      ETHIOCERT_API_URL: ${ETHIOCERT_API_URL:-}
+      ETHIOCERT_API_KEY: ${ETHIOCERT_API_KEY:-}
+    volumes:
+      - adwa-data:/data
+    expose:
+      - "3000" # reachable by Caddy only; not published to the host
+
+  caddy:
+    image: caddy:2
+    restart: unless-stopped
+    depends_on:
+      - app
+    environment:
+      SITE_ADDRESS: ${SITE_ADDRESS:?SITE_ADDRESS must be set (public hostname)}
+      APP_UPSTREAM: app:3000
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy-data:/data
+      - caddy-config:/config
+
+volumes:
+  adwa-data:
+  caddy-data:
+  caddy-config:

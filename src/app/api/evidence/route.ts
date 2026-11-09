@@ -34,7 +34,8 @@ export async function GET(req: NextRequest) {
     where.OR = [{ id: rootId }, { rootId }];
   }
   if (search) {
-    const contains = { contains: search };
+    // PostgreSQL LIKE is case-sensitive; ask for case-insensitive matching explicitly.
+    const contains = { contains: search, mode: "insensitive" as const };
     where.AND = [
       {
         OR: [{ title: contains }, { fileName: contains }, { description: contains }, { tags: contains }],
